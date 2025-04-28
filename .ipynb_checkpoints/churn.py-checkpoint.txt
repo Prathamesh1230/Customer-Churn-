@@ -1,0 +1,106 @@
+# Import necessary libraries
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Machine learning libraries
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+
+# Load the dataset
+df = pd.read_csv('WA_Fn-UseC_-Telco-Customer-Churn.csv')
+
+# Display first few rows
+print(df.head())
+
+# ------------------- Data Preprocessing -------------------
+
+# Drop the 'customerID' column
+df.drop('customerID', axis=1, inplace=True)
+
+# Convert 'TotalCharges' to numeric, coerce errors
+df['TotalCharges'] = pd.to_numeric(df['TotalCharges'], errors='coerce')
+
+# Check for missing values
+print("\nMissing Values Before Handling:\n", df.isnull().sum())
+
+# Fill missing TotalCharges with the column mean
+df['TotalCharges'].fillna(df['TotalCharges'].mean(), inplace=True)
+
+# Check again for missing values
+print("\nMissing Values After Handling:\n", df.isnull().sum())
+
+# Label Encoding for categorical variables
+le = LabelEncoder()
+for column in df.columns:
+    if df[column].dtype == 'object':
+        df[column] = le.fit_transform(df[column])
+
+# Separate features and target
+X = df.drop('Churn', axis=1)
+y = df['Churn']
+
+# Feature Scaling
+scaler = StandardScaler()
+X = scaler.fit_transform(X)
+
+# Train-Test Split
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+
+# ------------------- Model Building -------------------
+
+# 1. Decision Tree Classifier
+dt_model = DecisionTreeClassifier(random_state=42)
+dt_model.fit(X_train, y_train)
+y_pred_dt = dt_model.predict(X_test)
+
+# 2. Logistic Regression
+lr_model = LogisticRegression(max_iter=500, random_state=42)
+lr_model.fit(X_train, y_train)
+y_pred_lr = lr_model.predict(X_test)
+
+# ------------------- Model Evaluation -------------------
+
+# Decision Tree Evaluation
+print("\n--- Decision Tree Evaluation ---")
+print("Accuracy:", accuracy_score(y_test, y_pred_dt))
+print(classification_report(y_test, y_pred_dt))
+
+# Logistic Regression Evaluation
+print("\n--- Logistic Regression Evaluation ---")
+print("Accuracy:", accuracy_score(y_test, y_pred_lr))
+print(classification_report(y_test, y_pred_lr))
+
+# Confusion Matrix for Decision Tree
+cm_dt = confusion_matrix(y_test, y_pred_dt)
+plt.figure(figsize=(6,4))
+sns.heatmap(cm_dt, annot=True, fmt='d', cmap='Blues')
+plt.title('Decision Tree Confusion Matrix')
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
+plt.show()
+
+# Confusion Matrix for Logistic Regression
+cm_lr = confusion_matrix(y_test, y_pred_lr)
+plt.figure(figsize=(6,4))
+sns.heatmap(cm_lr, annot=True, fmt='d', cmap='Greens')
+plt.title('Logistic Regression Confusion Matrix')
+plt.xlabel('Predicted')
+plt.ylabel('Actual')
+plt.show()
+
+# ------------------- Feature Importance (Decision Tree) -------------------
+
+# Feature Importance Plot
+importances = dt_model.feature_importances_
+indices = np.argsort(importances)[::-1]
+feature_names = df.drop('Churn', axis=1).columns
+
+plt.figure(figsize=(10,8))
+sns.barplot(x=importances[indices], y=feature_names[indices])
+plt.title('Feature Importance (Decision Tree)')
+plt.show()
